@@ -1,6 +1,6 @@
 (function () {
 	var width  = screen.width,
-    height = screen.height-230;
+    height = screen.height-240;
 
   console.log("before svg");
   var svg = d3.select("#chart")
@@ -21,6 +21,7 @@
         return width/2;
       }
       if(d.value.building_id==2){
+        console.log(d);
         return (width/2)+(width/3);
       }
     }).strength(0.05)
@@ -32,6 +33,38 @@
   var forceY = d3.forceY(function(d) {
       return height/2;
     }).strength(0.05)
+
+  var forceX_separate_rooms = d3.forceX(function(d) {
+    console.log(d.value.apartment_size);
+    if(d.value.apartment_size==1){
+      return (width/2)-(width/3);
+    }
+    if(d.value.apartment_size==2){
+      return (width/2)+(width/3);
+    }
+    if(d.value.apartment_size==3){
+      return (width/2)-(width/3);
+    }
+    if(d.value.apartment_size==4){
+      return (width/2)+(width/3);
+    }
+    }).strength(0.05)
+
+  var forceY_separate_rooms = d3.forceY(function(d) {
+      if(d.value.apartment_size==1){
+        return (height/2)-(height/4);
+      }
+      if(d.value.apartment_size==2){
+        return (height/2)-(height/4);
+      }
+      if(d.value.apartment_size==3){
+        return (height/2)+(height/4);
+      }
+      if(d.value.apartment_size==4){
+        return (height/2)+(height/4);
+      }
+    }).strength(0.05)
+
 
   var tooltip = d3.select("#chart")
     .append("div")
@@ -103,7 +136,8 @@
           volume: d3.sum(v,function(d) { return d.volume; }),
           hot: d3.sum(v,function(d) { return d.hot; }),
           cold: d3.sum(v,function(d) { return d.cold; }),
-          building_id: get_building_id(v[0].building_id)
+          building_id: get_building_id(v[0].building_id),
+          apartment_size: parseInt(v[0].apartment_size)
         };
       })
       .entries(datapoints)
@@ -169,10 +203,9 @@
         tooltip
           .transition()
           .duration(200)
-        console.log(d.value.hot)
         tooltip
           .style("opacity", 1)
-          .html("Volume: " + d.value.volume+  "       Hot: " + d.value.hot + "        Cold "+ d.value.cold)
+          .html("Building: nr "+ (d.value.building_id+1) + ", Rooms: "+ d.value.apartment_size + ", Water volume: " + d.value.volume+  ", Hot water: " + d.value.hot + ", Cold water "+ d.value.cold)
           .style("left", (d3.mouse(this)[0]+30) + "px")
           .style("top", (d3.mouse(this)[1]+30) + "px")
       }
@@ -193,7 +226,7 @@
 
     force_collide = d3.forceCollide(function(d) {
         return radius_scale(d.value.volume) + 1; 
-    }).strength(1)
+    })
 
     sim
       .force("x", forceX_combine)
@@ -264,20 +297,64 @@
 
   }
 
+  // Make cleaner
+  var wait1=true;
+  var wait2=true;
+  var wait3=true;
+
   d3.select("#building").on('click', function() {
+    wait2,wait3=false;
+    wait1=true;
     sim
       .force("x", forceX_separate)
       .force("y", forceY.strength(0.01))
       .alphaTarget(0.25)
       .restart()
+
+
+      setTimeout(function() { 
+        if(wait1){
+          sim
+            .alphaTarget(0)
+            .restart()
+          }
+       }, 7000);
+  })
+
+  d3.select("#rooms").on('click', function() {
+    wait1,wait3=false;
+    wait2=true;
+    sim
+      .force("x", forceX_separate_rooms)
+      .force("y", forceY_separate_rooms.strength(0.1))
+      .alphaTarget(0.3)
+      .restart()
+
+      setTimeout(function() { 
+        if(wait2){
+          sim
+            .alphaTarget(0)
+            .restart()
+        }
+       }, 7000);
   })
 
   d3.select("#combine").on('click', function() {
+    wait1,wait2=false;
+    wait3=true;
     sim
       .force("x", forceX_combine)
       .force("y", forceY.strength(0.05))
-      .alphaTarget(0.03)
+      .alphaTarget(0.2)
       .restart()
+
+      setTimeout(function() { 
+        if(wait3){
+          sim
+            .alphaTarget(0)
+            .restart()
+        }
+       }, 4000);
 
   })
 
